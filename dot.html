@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dot NAME + Animated Login</title>
+<style>
+  body, html {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #000;
+    font-family: Arial, sans-serif;
+  }
+  canvas {
+    display: block;
+    z-index: 1;
+  }
+
+  /* Login Form */
+  .login-container {
+    position: absolute;
+    top: 65%; /* NAME এর নিচে */
+    left: 50%;
+    transform: translateX(-50%) translateY(-50px); /* প্রথমে উপরে */
+    text-align: center;
+    z-index: 2;
+    opacity: 0; /* প্রথমে hidden */
+    transition: all 1s ease; /* smooth animation */
+  }
+
+  .login-container.active {
+    transform: translateX(-50%) translateY(0px); /* slide down */
+    opacity: 1;
+  }
+
+  .login-container input {
+    width: 250px;
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 6px;
+    border: 1px solid #0f0;
+    background: transparent;
+    color: #0f0;
+    font-weight: bold;
+    outline: none;
+    text-align: center;
+  }
+
+  .login-container input::placeholder {
+    color: #0fa;
+  }
+
+  .login-container button {
+    width: 270px;
+    padding: 10px;
+    margin-top: 12px;
+    border-radius: 6px;
+    border: 1px solid #0f0;
+    background-color: transparent;
+    color: #0f0;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  .login-container button:hover {
+    background-color: #0f0;
+    color: #000;
+  }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<!-- Login Form -->
+<div class="login-container" id="loginForm">
+  <input type="text" placeholder="Username" id="username">
+  <input type="password" placeholder="Password" id="password">
+  <button onclick="login()">Login</button>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let width = canvas.width = window.innerWidth;
+let height = canvas.height = window.innerHeight;
+
+const totalDots = 3500;
+let dots = [];
+let textDots = [];
+let formingText = false;
+
+const letters = [
+  {char:' ', fontSize:120},
+  {char:' ', fontSize:120}, 
+  {char:' ', fontSize:120},  
+  {char:'M', fontSize:120},
+  {char:'H', fontSize:120},
+  {char:' ', fontSize:120}, 
+  {char:'H', fontSize:120},
+  {char:'R', fontSize:120},
+  {char:'I', fontSize:120},
+  {char:'D', fontSize:120},
+  {char:'O', fontSize:120},
+  {char:'Y', fontSize:120},
+];
+
+class Dot {
+  constructor() {
+    this.x = Math.random() * width;
+    this.y = Math.random() * height;
+    this.size = Math.random() * 0.6 + 0.4;
+    this.speedX = (Math.random() - 0.5) * 1.5;
+    this.speedY = (Math.random() - 0.5) * 1.5;
+    this.tx = this.x;
+    this.ty = this.y;
+  }
+
+  update() {
+    if (!formingText) {
+      this.x += this.speedX;
+      this.y += this.speedY;
+
+      if (this.x < 0) this.x = width;
+      if (this.x > width) this.x = 0;
+      if (this.y < 0) this.y = height;
+      if (this.y > height) this.y = 0;
+    } else {
+      this.x += (this.tx - this.x) * 0.08;
+      this.y += (this.ty - this.y) * 0.08;
+    }
+  }
+
+  draw() {
+    ctx.fillStyle = "rgb(0,255,0)";
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// Initialize dots
+for (let i = 0; i < totalDots; i++) {
+  dots.push(new Dot());
+}
+
+// Capture letter pixels
+function getLetterPixels() {
+  let pixels = [];
+  let offsetX = width/2 - 400; 
+  letters.forEach(letter => {
+    if(letter.char !== ' '){
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCanvas.width = width;
+      tempCanvas.height = height;
+      tempCtx.fillStyle = 'white';
+      tempCtx.font = `bold ${letter.fontSize}px Arial`;
+      tempCtx.textAlign = 'left';
+      tempCtx.textBaseline = 'middle';
+      tempCtx.fillText(letter.char, offsetX, height/2);
+      
+      const imageData = tempCtx.getImageData(0, 0, width, height).data;
+      for (let y = 0; y < height; y += 4) {
+        for (let x = 0; x < width; x += 4) {
+          const index = (y * width + x) * 4;
+          if (imageData[index + 3] > 128) {
+            pixels.push({x, y});
+          }
+        }
+      }
+      offsetX += tempCtx.measureText(letter.char).width + 10; 
+    } else {
+      offsetX += 20; 
+    }
+  });
+  return pixels;
+}
+
+// On click: form text + show login
+canvas.addEventListener('click', () => {
+  formingText = true;
+  textDots = getLetterPixels();
+
+  for (let i = 0; i < dots.length; i++) {
+    const target = textDots[i % textDots.length];
+    dots[i].tx = target.x;
+    dots[i].ty = target.y;
+  }
+
+  // Animate login form after formation
+  const loginForm = document.getElementById('loginForm');
+  setTimeout(() => {
+    loginForm.classList.add('active');
+  }, 500); // half-second delay for smooth effect
+});
+
+// Animation loop
+function animate() {
+  ctx.clearRect(0,0,width,height);
+  dots.forEach(dot => {
+    dot.update();
+    dot.draw();
+  });
+  requestAnimationFrame(animate);
+}
+
+animate();
+
+window.addEventListener('resize', () => {
+  width = canvas.width = window.innerWidth;
+  height = canvas.height = window.innerHeight;
+});
+
+// Simple login
+function login() {
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  if(username === "admin" && password === "1234"){
+    alert("Login Successful!");
+  } else {
+    alert("Invalid Credentials!");
+  }
+}
+</script>
+</body>
+</html>
