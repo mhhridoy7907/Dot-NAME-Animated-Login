@@ -1,37 +1,227 @@
-# Dot NAME + Animated Login
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dot NAME + Animated Login</title>
+<style>
+  body, html {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #000;
+    font-family: Arial, sans-serif;
+  }
+  canvas {
+    display: block;
+    z-index: 1;
+  }
 
-An interactive and visually appealing **dot animation login page** created using HTML, CSS, and JavaScript. Click anywhere on the canvas to form the animated letters of the name **"MH HRIDOY"** and reveal a stylish login form.
+ 
+  .login-container {
+    position: absolute;
+    top: 65%; 
+    left: 50%;
+    transform: translateX(-50%) translateY(-50px); 
+    text-align: center;
+    z-index: 2;
+    opacity: 0; 
+    transition: all 1s ease; 
+  }
 
-![Preview](preview.png) <!-- Optional: replace with your screenshot -->
+  .login-container.active {
+    transform: translateX(-50%) translateY(0px); /
+    opacity: 1;
+  }
 
----
+  .login-container input {
+    width: 250px;
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 6px;
+    border: 1px solid #0f0;
+    background: transparent;
+    color: #0f0;
+    font-weight: bold;
+    outline: none;
+    text-align: center;
+  }
 
-## Features
+  .login-container input::placeholder {
+    color: #0fa;
+  }
 
-- **Dot Animation:** Thousands of green dots float randomly on the screen.
-- **Interactive Text Formation:** Clicking the canvas makes the dots arrange to form a custom name.
-- **Animated Login Form:** Smooth fade-in and slide-down effect for the login form.
-- **Responsive Design:** Works on all screen sizes.
-- **Simple Authentication:** Check credentials using a basic JavaScript function.
+  .login-container button {
+    width: 270px;
+    padding: 10px;
+    margin-top: 12px;
+    border-radius: 6px;
+    border: 1px solid #0f0;
+    background-color: transparent;
+    color: #0f0;
+    font-weight: bold;
+    cursor: pointer;
+  }
 
----
+  .login-container button:hover {
+    background-color: #0f0;
+    color: #000;
+  }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
 
-## Demo
 
-Click anywhere on the canvas to see the animation in action and the login form appear.
+<div class="login-container" id="loginForm">
+  <input type="text" placeholder="Username" id="username">
+  <input type="password" placeholder="Password" id="password">
+  <button onclick="login()">Login</button>
+</div>
 
----
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let width = canvas.width = window.innerWidth;
+let height = canvas.height = window.innerHeight;
 
-## Getting Started
+const totalDots = 3500;
+let dots = [];
+let textDots = [];
+let formingText = false;
 
-### Prerequisites
+const letters = [
+  {char:' ', fontSize:120},
+  {char:' ', fontSize:120}, 
+  {char:' ', fontSize:120},  
+  {char:'M', fontSize:120},
+  {char:'H', fontSize:120},
+  {char:' ', fontSize:120}, 
+  {char:'H', fontSize:120},
+  {char:'R', fontSize:120},
+  {char:'I', fontSize:120},
+  {char:'D', fontSize:120},
+  {char:'O', fontSize:120},
+  {char:'Y', fontSize:120},
+];
 
-- Modern web browser (Chrome, Firefox, Edge, Safari)
-- No server needed — works locally
+class Dot {
+  constructor() {
+    this.x = Math.random() * width;
+    this.y = Math.random() * height;
+    this.size = Math.random() * 0.6 + 0.4;
+    this.speedX = (Math.random() - 0.5) * 1.5;
+    this.speedY = (Math.random() - 0.5) * 1.5;
+    this.tx = this.x;
+    this.ty = this.y;
+  }
 
-### Installation
+  update() {
+    if (!formingText) {
+      this.x += this.speedX;
+      this.y += this.speedY;
 
-1. Clone this repository:
+      if (this.x < 0) this.x = width;
+      if (this.x > width) this.x = 0;
+      if (this.y < 0) this.y = height;
+      if (this.y > height) this.y = 0;
+    } else {
+      this.x += (this.tx - this.x) * 0.08;
+      this.y += (this.ty - this.y) * 0.08;
+    }
+  }
 
-```bash
-git clone https://github.com/your-username/dot-name-login.git
+  draw() {
+    ctx.fillStyle = "rgb(0,255,0)";
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+
+for (let i = 0; i < totalDots; i++) {
+  dots.push(new Dot());
+}
+
+
+function getLetterPixels() {
+  let pixels = [];
+  let offsetX = width/2 - 400; 
+  letters.forEach(letter => {
+    if(letter.char !== ' '){
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCanvas.width = width;
+      tempCanvas.height = height;
+      tempCtx.fillStyle = 'white';
+      tempCtx.font = `bold ${letter.fontSize}px Arial`;
+      tempCtx.textAlign = 'left';
+      tempCtx.textBaseline = 'middle';
+      tempCtx.fillText(letter.char, offsetX, height/2);
+      
+      const imageData = tempCtx.getImageData(0, 0, width, height).data;
+      for (let y = 0; y < height; y += 4) {
+        for (let x = 0; x < width; x += 4) {
+          const index = (y * width + x) * 4;
+          if (imageData[index + 3] > 128) {
+            pixels.push({x, y});
+          }
+        }
+      }
+      offsetX += tempCtx.measureText(letter.char).width + 10; 
+    } else {
+      offsetX += 20; 
+    }
+  });
+  return pixels;
+}
+
+
+canvas.addEventListener('click', () => {
+  formingText = true;
+  textDots = getLetterPixels();
+
+  for (let i = 0; i < dots.length; i++) {
+    const target = textDots[i % textDots.length];
+    dots[i].tx = target.x;
+    dots[i].ty = target.y;
+  }
+
+
+  const loginForm = document.getElementById('loginForm');
+  setTimeout(() => {
+    loginForm.classList.add('active');
+  }, 500); /
+});
+
+
+function animate() {
+  ctx.clearRect(0,0,width,height);
+  dots.forEach(dot => {
+    dot.update();
+    dot.draw();
+  });
+  requestAnimationFrame(animate);
+}
+
+animate();
+
+window.addEventListener('resize', () => {
+  width = canvas.width = window.innerWidth;
+  height = canvas.height = window.innerHeight;
+});
+
+
+function login() {
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  if(username === "admin" && password === "1234"){
+    alert("Login Successful!");
+  } else {
+    alert("Invalid Credentials!");
+  }
+}
+</script>
+</body>
+</html>
