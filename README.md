@@ -3,7 +3,7 @@
 An interactive and visually appealing **dot animation login page** created using HTML, CSS, and JavaScript. Click anywhere on the canvas to form the animated letters of the name **"MH HRIDOY"** and reveal a stylish login form.
 
 <!-- Images -->
-![Animation Preview](animutionpage.png)
+![Animation Preview](page.png)
 ![Static Preview](preview.png)
 
 ---
